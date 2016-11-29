@@ -15,7 +15,7 @@ class DB{
     public static function setDatabase($value){
         self::$_DATABASE = $value;
     }
-//    public static function setdbCredentials($host, $dbname, $username, $password){
+    //    public static function setdbCredentials($host, $dbname, $username, $password){
 //        self::$_HOSTNAME = $host;
 //        self::$_DATABASE = $dbname;
 //        self::$_USERNAME = $username;
@@ -83,7 +83,15 @@ class DB{
                     $row = $query->fetchAll(PDO::FETCH_OBJ);
                     return $row;
                     break;
-                case 'fetchByCilumnName':
+
+
+                case 'fetchAllJoins':
+                    $row = $query->fetchAllJoins(PDO::FETCH_OBJ);
+                    return $row;
+                    break;
+
+
+                case 'fetchByColumnName':
                     $row = $query->fetchAll(PDO::FETCH_OBJ);
                     return $row;
                     break;
@@ -126,56 +134,96 @@ class DB{
         }
         return $preperingArray;
     }
-//    Public functiones
-    public static function fetch($sqlquery, array $bindparams = []){
+    //  ----------------------------------------------------------
+    //    Public functiones
+    private static function fetch($sqlquery, array $bindparams = []){
         self::$_count_fetch ++;
         self::$_count_sql_query ++;
         return self::_executeQuery($sqlquery, $bindparams, 'fetch');
     }
-    public static function deleteRecord($sqlquery, array $bindparams = []){
+    private static function deleteRecord($sqlquery, array $bindparams = []){
         self::$_count_fetch ++;
         self::$_count_sql_query ++;
         return self::_executeQuery($sqlquery, $bindparams, 'delete');
     }
-    public static function update($sqlquery, array $bindparams = []){
+    private static function updateRecord($sqlquery, array $bindparams = []){
         self::$_count_fetch ++;
         self::$_count_sql_query ++;
         return self::_executeQuery($sqlquery, $bindparams, 'update');
     }
-    public static function fetchAll($sqlquery, array $bindparams = []){
+    private static function fetchAll($sqlquery, array $bindparams = []){
         self::$_count_fetch_all ++;
         self::$_count_sql_query ++;
         return self::_executeQuery($sqlquery, $bindparams, 'fetchAll');
     }
-    public static function fetchByCilumnName($sqlquery, array $bindparams = []){
+
+
+    private static function fetchByColumnName($sqlquery, array $bindparams = []){
         self::$_count_fetch_all ++;
         self::$_count_sql_query ++;
-        return self::_executeQuery($sqlquery, $bindparams, 'fetchByCilumnName');
+        return self::_executeQuery($sqlquery, $bindparams, 'fetchByColumnName');
     }
-    public static function exec($sqlquery, array $bindparams =[]){
+    private static function exec($sqlquery, array $bindparams =[]){
         self::$_count_exec ++;
         self::$_count_sql_query ++;
         return self::_executeQuery($sqlquery, $bindparams, 'execute');
     }
-    public static function getStatistics(){
-        return [
-            'fetch' => self::$_count_fetch,
-            'fetchAll' => self::$_count_fetch_all,
-            'exec' => self::$_count_exec,
-            'sql_query' => self::$_count_sql_query
-        ];
-    }
-//    Custom functiones
-    public static function allRecords($table){
+    //    Custom functiones
+    public static function all(){
+        if (isset(User::$table)){
+            $table = User::$table;
+        }else {
+            $table = strtolower(get_called_class()).'s';
+        }
         return self::fetchAll("SELECT * FROM $table  ");
     }
-    public static function findById($table,$id){
+    public static function find($id){
+        if (isset(User::$table)){
+            $table = User::$table;
+        }else {
+            $table = strtolower(get_called_class()).'s';
+        }
         return self::fetch("SELECT * FROM $table WHERE id = :id", [['id',$id, 'int']]);
     }
-//    Create methode
-    public static function createRecord($table, array $params =[]){
+    public static function findByColumnName(array $column = []){
 //        The $params must be like:
-//        $params[] = ['colName_1' => 'colValue_1', 'colName_2' => 'colValue_2', ..., 'colName_n' => 'colValue_n']
+//        column[] = ['colName_1' => 'colValue_1', 'colName_2' => 'colValue_2', ..., 'colName_n' => 'colValue_n']
+        if (isset(User::$table)){
+            $table = User::$table;
+        }else {
+            $table = strtolower(get_called_class()).'s';
+        }
+        $arrayKeys = $paramsKeys = array_keys($column);
+        $paramArray = [];
+        foreach ($arrayKeys as $key){
+            $paramArray[] ="$key = :$key";
+        }
+        $paramsInQuery = implode(' and ', $paramArray);
+//      Returns number of delleted rows
+//      SELECT * from users where username = :username and password = :password
+        return self::fetchByColumnName("SELECT * FROM $table WHERE $paramsInQuery ", self::prepareArray($column));
+    }
+    public static function selectJoin(array $joinTable = []){
+        foreach ($joinTable as $key => $table){
+            $joinTableName = $key;
+            $joinTableForeignKey = $table;
+        }
+        if (isset(User::$table)){
+            $table = User::$table;
+        }else {
+            $table = strtolower(get_called_class()).'s';
+        }
+        return self::fetchAll("SELECT * from $table JOIN $joinTableName ON $table.id = $joinTableName.$joinTableForeignKey");
+    }
+    //    Create methode
+    public static function create(array $params =[]){
+        //  The $params must be like:
+        //  $params[] = ['colName_1' => 'colValue_1', 'colName_2' => 'colValue_2', ..., 'colName_n' => 'colValue_n']
+        if (isset(User::$table)){
+            $table = User::$table;
+        }else {
+            $table = strtolower(get_called_class()).'s';
+        }
         $array = self::prepareArray($params);
         $paramsKeys = array_keys($params);
         $queryParams = implode(', ',$paramsKeys);
@@ -188,15 +236,24 @@ class DB{
         return self::exec("INSERT INTO $table ($queryParams) VALUES($queryBindParams) ", $array);
 
     }
-//  -------------------------------------------------------------
-//  Delete methodes
-    public static function deleteById($table,$id){
-
+    //  Delete methodes
+    public static function delete($id){
+        if (isset(User::$table)){
+            $table = User::$table;
+        }else {
+            $table = strtolower(get_called_class()).'s';
+        }
         return self::deleteRecord("DELETE FROM $table where id = :id", [['id',$id, 'int']]);
     }
-    public static function deleteByColumnName($table,array $column = []){
+    public static function deleteByColumnName(array $column = []){
 //        The $params must be like:
 //        column[] = ['colName_1' => 'colValue_1', 'colName_2' => 'colValue_2', ..., 'colName_n' => 'colValue_n']
+        if (isset(User::$table)){
+            $table = User::$table;
+        }else {
+            $table = strtolower(get_called_class()).'s';
+        }
+        $table = strtolower(get_called_class()).'s';
         $arrayKeys = $paramsKeys = array_keys($column);
         $paramArray = [];
         foreach ($arrayKeys as $key){
@@ -206,25 +263,15 @@ class DB{
 //      Returns number of delleted rows
         return self::deleteRecord("DELETE FROM $table where $paramsInQuery ", self::prepareArray($column));
     }
-    public static function findByColumnName($table,array $column = []){
-//        The $params must be like:
-//        column[] = ['colName_1' => 'colValue_1', 'colName_2' => 'colValue_2', ..., 'colName_n' => 'colValue_n']
-        $arrayKeys = $paramsKeys = array_keys($column);
-        $paramArray = [];
-        foreach ($arrayKeys as $key){
-            $paramArray[] ="$key = :$key";
-        }
-        $paramsInQuery = implode(' and ', $paramArray);
-//      Returns number of delleted rows
-//      SELECT * from users where username = :username and password = :password
-        return self::fetchByCilumnName("SELECT * FROM $table WHERE $paramsInQuery ", self::prepareArray($column));
-    }
-//  -------------------------------------------------------------------------
-
-//  Update Methode
-    public static function updateById($table, $id, array $parameters = []){
+    //  Update Methode
+    public static function update($id, array $parameters = []){
         //        The $params must be like:
 //        $parameters[] = ['colName_1' => 'colValue_1', 'colName_2' => 'colValue_2', ..., 'colName_n' => 'colValue_n']
+        if (isset(User::$table)){
+            $table = User::$table;
+        }else {
+            $table = strtolower(get_called_class()).'s';
+        }
         $arrayKeys = $paramsKeys = array_keys($parameters);
         $paramArray = [];
         foreach ($arrayKeys as $key){
@@ -232,7 +279,23 @@ class DB{
         }
         $paramsInQuery = implode(', ', $paramArray);
 //        Returns number of affected rows
-        return self::update("UPDATE $table SET $paramsInQuery  where id = $id ", self::prepareArray($parameters));
+        return self::updateRecord("UPDATE $table SET $paramsInQuery  where id = $id ", self::prepareArray($parameters));
     }
-//  ------------------------------------------------------------------------
+    //  ------------------------------------------------------------------------
+    //  Return JSON
+    public static function objToJSON($obj){
+        return json_encode($obj);
+    }
+    public static function getStatistics(){
+        return [
+            'fetch' => self::$_count_fetch,
+            'fetchAll' => self::$_count_fetch_all,
+            'exec' => self::$_count_exec,
+            'sql_query' => self::$_count_sql_query
+        ];
+    }
+
+//    DEVELOPMENT SECTION
+
+
 }

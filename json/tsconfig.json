@@ -1,0 +1,17 @@
+{
+  "user1": {
+    "firstName": "Valon",
+    "lastName": "Hajredini",
+    "age": 28
+  },
+  "user2": {
+    "firstName": "ekoloni",
+    "lastName": "ekopro",
+    "age": 28
+  },
+  "user3": {
+    "firstName": "filan",
+    "lastName": "fisteku",
+    "age": 28
+  }
+}
